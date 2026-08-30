@@ -1,0 +1,11 @@
+{
+  "title": "Más allá del tabú",
+  "description": "Provides Peruvian youth with interactive resources on gender violence, child marriage, and early pregnancy to raise awareness and support prevention.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
