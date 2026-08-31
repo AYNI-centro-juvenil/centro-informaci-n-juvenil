@@ -774,7 +774,7 @@ function NavBar({ active, setActive }: { active: string; setActive: (s: string) 
             className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white"
             style={{ background: "#8B31D4" }}
           >
-            M
+            <span translate="no">M</span>
 </div>
           <span
             className="text-base font-semibold tracking-tight"
