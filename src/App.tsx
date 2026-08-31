@@ -10,9 +10,9 @@ import afiche3 from "@/imports/3.png"
 import afiche4 from "@/imports/4.png"
 import afiche5 from "@/imports/5.png"
 import infografiaImg from "@/imports/infografia_.jpeg"
-import comic1 from "@/imports/1-3.png"
-import comic2 from "@/imports/2-1.png"
-import comic3 from "@/imports/3-3.png"
+import comic1 from "@/imports/HISTORIETA_AYNI_2.jpeg"
+import comic2 from "@/imports/HISTORIETA_AYNI1.jpeg"
+import comic3 from "@/imports/HISTORIETA_AYNI_3.jpeg"
 import ep0Audio from "@/imports/EP0_Bienvenida_AYNI.MP3"
 import ep1Audio from "@/imports/EP1_Qu__est__pasando_en_el_Per__AYNI.MP3"
 import ep2Audio from "@/imports/EP2__D_nde_empieza_la_violencia_AYNI.MP3"
@@ -1744,177 +1744,507 @@ function SimulationSection() {
   )
 }
 
-const AI_RESPONSES: { keywords: string[]; reply: string }[] = [
+// ═══════════════════════════════════════════════════════════════════════════
+// AYNI CHAT ENGINE — two-stage: inform first, support when risk detected
+// ═══════════════════════════════════════════════════════════════════════════
+
+function norm(s: string) {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+}
+
+interface AyniTopic {
+  id: string
+  keywords: string[]
+  riskKeywords?: string[]
+  info: string
+  more?: string
+  example?: string
+  action?: string
+  riskFollowUp?: string
+  helpRoutes?: string
+  quickReplies: string[]
+}
+
+const AYNI_TOPICS: AyniTopic[] = [
   {
-    keywords: ["hola", "buenos días", "buenas tardes", "buenas noches", "hi", "buen día"],
-    reply: "¡Hola! 💜 Soy el acompañante virtual de **Más Allá del Tabú**. Estoy aquí para orientarte sobre temas como violencia de género, embarazo adolescente, anticoncepción, matrimonio infantil, tus derechos y cómo acceder a ayuda en Perú.\n\nPuedes preguntarme lo que quieras — aquí no hay preguntas tontas y todo es confidencial. ¿En qué te puedo ayudar hoy?",
+    id: "greeting",
+    keywords: ["hola", "buenos dias", "buenas tardes", "buenas noches", "hey", "buenas", "hi", "ola", "buen dia"],
+    info: "¡Hola! 💜 Soy **Acompáñame AYNI**, tu orientadora de *Más Allá del Tabú*. Aquí puedes preguntarme sobre relaciones, consentimiento, embarazo, anticoncepción, tus derechos o violencia — sin juicios y con información real pensada para adolescentes en Perú.\n\n¿Sobre qué te gustaría conversar?",
+    quickReplies: ["Relaciones y consentimiento", "Embarazo y anticoncepción", "Violencia y señales de alerta", "Mis derechos en Perú"],
   },
   {
-    keywords: ["qué es violencia", "tipos de violencia", "formas de violencia", "violencia de género", "qué es la violencia"],
-    reply: "La **violencia de género** tiene muchas formas — no solo golpes. Según el MIMP y la Ley N.° 30364, incluye:\n\n• **Física:** golpes, empujones, jalones de cabello, cualquier daño corporal.\n• **Psicológica:** insultos, amenazas, humillaciones, control constante, aislamiento. Esta es la más frecuente y a veces la más difícil de reconocer.\n• **Sexual:** tocamientos no consentidos, presión para tener relaciones, envío de imágenes sin permiso.\n• **Económica:** quitarte dinero, impedirte trabajar o estudiar, controlar todos tus gastos.\n\nImportante: la violencia psicológica es igual de grave que la física aunque no deje marcas visibles. Si reconoces alguna de estas situaciones, puedes hablarme más al respecto. 💜",
+    id: "consentimiento",
+    keywords: ["consentimiento", "consentir", "decir si", "decir no", "q es consentimiento", "que es consentimiento", "significa consentimiento", "libre", "presion", "presión", "obligada", "obligado", "sin mi permiso"],
+    info: "El **consentimiento** es decir «sí» de forma libre, informada y entusiasta — sin presión, miedo ni manipulación.\n\nAlgunas cosas clave:\n• El consentimiento puede **retirarse en cualquier momento**, aunque antes hayas dicho sí.\n• El silencio, la inmovilidad o no resistir **no son consentimiento**.\n• Estar bajo el efecto del alcohol o drogas impide dar consentimiento válido.\n• En Perú, la edad de consentimiento sexual es **14 años**, pero las relaciones con diferencias de edad importantes o con personas en posición de autoridad tienen reglas especiales.",
+    more: "Hay tipos de consentimiento que vale conocer:\n\n🟣 **Consentimiento informado**: sabes exactamente qué va a pasar y sus consecuencias.\n🟣 **Consentimiento continuo**: no basta con decir «sí» una vez — se confirma durante toda la experiencia.\n🟣 **Consentimiento en pareja**: aplica también en relaciones estables. Una pareja no tiene acceso automático a tu cuerpo.\n\nUna regla práctica: si no hay un «sí» claro y entusiasta, entonces es «no». Y nadie debe hacerte sentir culpable por decirlo.",
+    example: "Situación concreta:\n\nRocío y su pareja se besan. Él quiere ir más lejos. Rocío dice «espera, no quiero ir tan rápido».\n\n❌ Sin consentimiento: él continúa ignorando lo que dijo.\n✅ Con consentimiento: él para, respeta su límite y le pregunta cómo se siente.\n\nEso es consentimiento en la práctica — escuchar y respetar, siempre.",
+    action: "Si sientes que tu consentimiento no fue respetado:\n\n• Habla con alguien de confianza — no tienes que enfrentarlo sola/o.\n• Puedes acudir al **CEM (Centro de Emergencia Mujer)** — es gratuito y confidencial.\n• Si fue reciente y quieres el **kit de emergencia** (profilaxis + AOE), ve a un centro de salud MINSA — no necesitas acompañante.",
+    quickReplies: ["Quiero saber más", "Muéstrame un ejemplo", "¿Qué puedo hacer?", "Mi consentimiento no fue respetado"],
   },
   {
-    keywords: ["me golpea", "me pega", "me agrede", "me lastima", "me hace daño", "violencia física"],
-    reply: "Lo que describes es **violencia física** y es un delito en Perú. No es tu culpa y no tienes que tolerarlo.\n\nLo primero: ¿estás en un lugar seguro ahora mismo? Si hay peligro inmediato, llama al **105 (Policía)** o al **116 (Bomberos)**.\n\nSi ya estás fuera de peligro, tienes estas opciones:\n• **Línea 100** (gratuita, 24h): orientación y derivación al servicio más cercano.\n• **CEM más cercano**: atención psicológica, legal y social — sin costo.\n• **Denuncia en comisaría**: la Policía está obligada a recibirla aunque no tengas lesiones visibles.\n\nNo necesitas tener pruebas perfectas para pedir ayuda. ¿Quieres que te explique cómo es el proceso de denuncia paso a paso?",
+    id: "esi",
+    keywords: ["esi", "educacion sexual", "educacion sexual integral", "clases de sexo", "informacion sexual", "educacion sexual en el colegio", "hablar de sexo"],
+    info: "La **Educación Sexual Integral (ESI)** es mucho más que hablar de sexo. Es aprender sobre:\n\n• Tu cuerpo y cómo funciona.\n• Relaciones sanas y respetuosas.\n• Consentimiento y límites personales.\n• Prevención del embarazo e ITS.\n• Tus derechos sexuales y reproductivos.\n• Género, identidad y diversidad.\n\nEn Perú, la ESI es un **derecho reconocido por ley**. Tienes derecho a recibirla en tu colegio.",
+    more: "Cosas que muchos colegios no enseñan pero deberían:\n\n• El placer forma parte de la sexualidad — y eso no es malo.\n• Los hombres también tienen derecho a poner límites y decir «no».\n• La orientación sexual e identidad de género son parte de la diversidad humana.\n• Hablar de anticonceptivos **no hace que los adolescentes tengan más relaciones** — los hace más seguros.\n• Muchos embarazos adolescentes en Perú ocurren por falta de información, no por exceso de libertad.",
+    action: "Si tu colegio no aborda estos temas:\n\n• Consulta el portal de **INPPARES** (inppares.org.pe) — información confiable para jóvenes.\n• La **Defensoría del Pueblo** puede recibir quejas si tu colegio niega educación sexual.\n• Organizaciones como **PROMSEX** tienen materiales gratuitos para adolescentes.",
+    quickReplies: ["Quiero saber más", "Hablar de relaciones", "Hablar de anticoncepción", "Mis derechos"],
   },
   {
-    keywords: ["violencia psicológica", "me insulta", "me humilla", "me controla", "me amenaza", "me grita", "me ignora", "me menosprecia"],
-    reply: "La **violencia psicológica** es tan real como la física, aunque a veces sea más difícil de nombrar. Incluye insultos, humillaciones, amenazas, control del teléfono o redes, aislarte de amigos y familia, hacerte sentir que todo es tu culpa, o ignorarte como castigo.\n\nEn Perú, la Ley N.° 30364 reconoce esto como violencia y las instituciones están obligadas a actuar. No necesitas tener golpes para denunciar.\n\nAlgunos indicadores de que estás en esta situación:\n• Sientes que «caminas sobre cáscaras de huevo» para no molestarlo/a.\n• Te ha dicho cosas como «sin mí no eres nada» o «nadie te va a creer».\n• Has dejado de ver a personas que quieres por presión de esa persona.\n\nPuedes llamar a la **Línea 100** para hablar con alguien capacitado. ¿Quieres contarme más sobre lo que está pasando?",
+    id: "embarazo",
+    keywords: ["embarazo adolescente", "embarazo", "embarazada", "embarazado", "bebe", "bebé", "gestacion", "gestación", "preñada", "creo que estoy embarazada", "podria estar embarazada", "podría estar embarazada", "me atraso", "me atrase", "me atrasé", "atraso el periodo", "faltó la regla", "falto la regla"],
+    riskKeywords: ["estoy embarazada", "creo que estoy embarazada", "salí embarazada", "me embaracé"],
+    info: "El embarazo en adolescentes ocurre cuando una joven de menos de 20 años queda embarazada. En Perú, **1 de cada 4 adolescentes** ya fue madre o está embarazada — una cifra muy alta que refleja la falta de acceso a información y anticonceptivos.\n\nSi quieres saber más sobre el embarazo, la prevención, o estás pasando por esto ahora mismo — cuéntame un poco más y te oriento.",
+    more: "Causas más frecuentes del embarazo adolescente en Perú:\n• Falta de acceso a información y anticonceptivos.\n• Violencia sexual (muchos embarazos son producto de abuso).\n• Presión de pareja o entorno.\n• Desinformación sobre métodos anticonceptivos.\n\nDerechos que tienes si estás embarazada:\n• **Derecho a continuar en el colegio** — ninguna institución puede expulsarte (Ley N.° 29600).\n• **Atención médica gratuita** en centros MINSA sin necesitar autorización de tus padres.\n• Si eres menor de 14 años y estás embarazada, el personal de salud está obligado a activar una ruta de protección, porque legalmente es siempre consecuencia de violación.",
+    example: "Valentina tiene 16 años y se le atrasa el período. Tiene miedo de decírselo a sus padres. Compra una prueba de farmacia — sale positiva.\n\nLo que puede hacer:\n✅ Ir a un centro de salud MINSA — la atención es gratuita.\n✅ Hablar con un/a adulto/a de confianza (docente, orientador/a).\n✅ Conocer sus opciones antes de tomar cualquier decisión.\n✅ Saber que tiene derecho a seguir estudiando.",
+    action: "Si crees que podrías estar embarazada:\n\n1️⃣ Haz una prueba de embarazo — se consiguen en farmacias sin receta.\n2️⃣ Ve a un **centro de salud MINSA** — la atención prenatal adolescente es gratuita.\n3️⃣ Recuerda: tienes derecho a seguir en el colegio (Ley N.° 29600).\n4️⃣ Busca orientación antes de tomar decisiones — tienes más opciones de las que crees.",
+    riskFollowUp: "¿Estás pasando por esto ahora mismo? Cuéntame un poco más — hay orientación específica según tu situación.",
+    helpRoutes: "🏥 **Centro de salud MINSA** — atención prenatal adolescente gratuita\n📞 **Línea 100** — si el embarazo está vinculado a violencia\n🏛️ **CEM** — si hay violencia de por medio\n📋 **INPPARES** — orientación en salud sexual y reproductiva",
+    quickReplies: ["Quiero saber más", "Me está pasando a mí", "¿Cómo prevenirlo?", "¿Qué puedo hacer?"],
   },
   {
-    keywords: ["acoso", "me acosa", "hostigamiento", "me persigue", "me sigue", "me manda mensajes", "acoso sexual", "acoso callejero"],
-    reply: "El **acoso** — ya sea callejero, escolar o digital — es una forma de violencia sexual que está tipificada en el Código Penal peruano (Ley N.° 27942 sobre hostigamiento sexual).\n\nSe considera acoso cuando alguien:\n• Te hace comentarios sobre tu cuerpo sin tu consentimiento.\n• Te manda mensajes, fotos o videos de contenido sexual que no pediste.\n• Te sigue, te espera o aparece repetidamente en tus espacios.\n• Te presiona para salir o tener contacto aunque hayas dicho que no.\n\n**¿Qué puedes hacer?**\n• Guarda capturas de pantalla, fechas y mensajes como evidencia.\n• Repórtalo en la **Línea 100** o al **Chat 100** (chat100.pe).\n• Si ocurre en el colegio, puedes acudir a la dirección o a la **DEMUNA** de tu municipio.\n• Si es por redes sociales, también puedes denunciarlo directamente en la plataforma.\n\nNadie tiene derecho a hacerte sentir incómoda/o en tu propio espacio. 💜",
+    id: "anticonceptivos",
+    keywords: ["anticonceptivos", "anticoncepcion", "anticoncepción", "metodos anticonceptivos", "métodos anticonceptivos", "pastillas", "condon", "condón", "implante", "inyeccion", "inyección", "diu", "pildora", "píldora", "como no quedar embarazada", "cómo no quedar embarazada", "protegerme", "protegerse", "metodo anticonceptivo"],
+    info: "Existen varios **métodos anticonceptivos** disponibles para adolescentes en Perú. Los principales:\n\n💊 **Píldora** — tomada diario, muy efectiva si se usa correctamente.\n🔵 **Condón** — el único que protege de ITS además del embarazo. Úsalo siempre.\n💉 **Inyección** — mensual o trimestral.\n🔴 **Implante subdérmico** — dura hasta 3 años, muy efectivo.\n🔲 **DIU** — dispositivo intrauterino, dura años.\n\nEn centros de salud MINSA, varios de estos son **gratuitos para adolescentes**.",
+    more: "Datos importantes que muchos no conocen:\n\n• El **condón** es el único que protege contra el VIH y otras ITS — úsalo siempre, incluso si usas otro método.\n• La **AOE (pastilla del día siguiente)** no es un método regular, pero sirve en emergencias hasta 72h (mejor cuanto antes).\n• Ningún método es 100% efectivo — combinar dos reduce mucho el riesgo.\n• El **método del ritmo o del calendario** es muy poco confiable, especialmente con ciclos irregulares.\n• Los anticonceptivos no te hacen «peor persona» ni cambian nada sobre quién eres.",
+    example: "Diana tiene 17 años y quiere un método anticonceptivo sin que sus padres se enteren.\n\n✅ Puede ir a un **puesto de salud MINSA** — en Perú los adolescentes pueden acceder a servicios de salud sexual de forma confidencial.\n✅ Puede comprar condones en cualquier farmacia sin receta ni identificación.\n✅ Puede pedir consejería a una obstetriz o médico sin que se lo digan a sus padres.",
+    action: "Pasos para acceder a anticonceptivos:\n\n1️⃣ Ve a un **centro de salud MINSA** — orientación y métodos son gratuitos.\n2️⃣ Pide hablar con una **obstetriz** — son quienes atienden más estos temas.\n3️⃣ Si tienes vergüenza de ir sola/o, puedes ir con alguien de confianza.\n4️⃣ Los condones se consiguen en cualquier farmacia sin receta.",
+    quickReplies: ["Quiero saber más", "¿Qué es la pastilla de emergencia?", "Muéstrame un ejemplo", "¿Cómo los consigo?"],
   },
   {
-    keywords: ["violencia sexual", "me violaron", "abuso sexual", "me tocaron", "me tocó", "tocamiento indebido", "me forzó", "me obligó"],
-    reply: "Lo que describes es una situación de **violencia sexual** y quiero que sepas algo importante: no es tu culpa, sin importar cómo ibas vestida/o, dónde estabas ni qué pasó antes.\n\n**Si fue reciente (menos de 72 horas):**\nTienes derecho a ir a cualquier establecimiento de salud del MINSA y recibir el **Kit de Emergencia (Protocolo DS N.° 083)** de forma gratuita y sin necesitar autorización de nadie. Este kit incluye medicamentos para prevenir ITS y embarazo. Es un derecho — el personal de salud no puede negártelo.\n\n**Pasos que puedes seguir:**\n1. Ir a un centro de salud o CEM lo antes posible.\n2. Llamar a la **Línea 100** para orientación inmediata.\n3. Si quieres denunciar: la Policía o la Fiscalía están obligadas a recibirte.\n\nNo tienes que enfrentar esto sola/o. ¿Estás en un lugar seguro ahora?",
+    id: "aoe",
+    keywords: ["pastilla del dia siguiente", "pastilla del día siguiente", "aoe", "anticoncepcion de emergencia", "anticoncepción de emergencia", "pildora emergencia", "píldora emergencia", "levonorgestrel", "plan b", "postday", "nordette", "pastilla de emergencia"],
+    info: "La **Anticoncepción Oral de Emergencia (AOE)** — «pastilla del día siguiente» — evita un embarazo después de una relación sin protección o cuando el método falló.\n\n📌 **No es abortiva** — evita que ocurra el embarazo, no lo interrumpe.\n📌 Funciona mejor **cuanto antes se tome** — idealmente dentro de las 72 horas.\n📌 Disponible en **farmacias** sin receta y en centros de salud MINSA **gratuitamente**.\n📌 **No afecta la fertilidad futura**.",
+    more: "Lo que debes saber además:\n\n• La AOE **no protege de ITS** — si hubo exposición, consulta sobre profilaxis.\n• Puede causar náuseas, dolor de cabeza o sangrado irregular — son efectos temporales.\n• No se recomienda como método regular — hay métodos más convenientes para uso continuo.\n• En Perú, el Tribunal Constitucional estableció que el Estado debe distribuirla gratuitamente.",
+    action: "¿La necesitas ahora?\n\n1️⃣ Ve a la **farmacia más cercana** — sin receta.\n2️⃣ También en cualquier **centro de salud MINSA** (gratuita).\n3️⃣ Tómala lo antes posible — cada hora cuenta.\n4️⃣ Si la relación fue forzada, ve también al CEM para el **kit completo** (profilaxis ITS + AOE).",
+    quickReplies: ["Quiero saber más", "¿Cómo accedo a ella?", "La relación no fue consentida", "Necesito ayuda"],
   },
   {
-    keywords: ["embarazada", "estoy embarazada", "quedé embarazada", "embarazo adolescente", "salí embarazada"],
-    reply: "Antes de responder, ¿me puedes decir un poco más sobre tu situación? Lo que necesitas saber cambia bastante dependiendo de si buscas información general, si eres menor de edad, o si estás en una situación difícil.\n\nLo que sí te puedo decir ahora:\n• Las adolescentes embarazadas tienen **derecho a continuar en el colegio** — ninguna institución puede expulsarte ni impedirte asistir (MINEDU lo garantiza).\n• Tienes derecho a **atención médica gratuita** en cualquier centro de salud MINSA, sin necesitar autorización de tus padres.\n• Si el embarazo es consecuencia de violencia sexual, existen rutas de atención integral específicas.\n\nSi eres menor de 14 años: el personal de salud tiene la **obligación legal** de activar una ruta de protección, porque en esos casos el embarazo es siempre consecuencia de una violación según la ley peruana.\n\n¿Quieres que te explique alguno de estos puntos con más detalle?",
+    id: "its",
+    keywords: ["its", "ets", "vih", "sida", "clamidia", "gonorrea", "herpes", "sifilis", "sífilis", "infeccion de transmision sexual", "infección de transmisión sexual", "enfermedades sexuales", "me contagiaron", "contagio"],
+    info: "Las **Infecciones de Transmisión Sexual (ITS)** se transmiten por contacto sexual sin protección. Las más comunes:\n\n• **VIH** — afecta el sistema inmune. Con tratamiento, se puede vivir muy bien.\n• **Clamidia y gonorrea** — muy frecuentes, a veces sin síntomas. Tienen cura con antibióticos.\n• **Herpes** — virus que permanece en el cuerpo, pero se controla.\n• **Sífilis** — tiene cura si se detecta a tiempo.\n• **VPH** — muy común, puede causar verrugas o cánceres. Hay vacuna.\n\n🔵 El **condón** reduce significativamente el riesgo.",
+    more: "Lo que muchos no saben:\n\n• Las ITS pueden no tener síntomas — por eso es importante **hacerse pruebas** si tuviste relaciones sin protección.\n• Tener una ITS no dice nada malo sobre ti — le puede pasar a cualquiera.\n• Las pruebas de VIH y algunas otras son **gratuitas en centros MINSA**.\n• El VIH hoy no es una sentencia de muerte — con tratamiento antirretroviral, las personas viven muchos años.\n• La detección temprana hace una gran diferencia.",
+    action: "Si crees que pudo haber una exposición:\n\n1️⃣ Ve a un **centro de salud MINSA** — las pruebas son gratuitas y confidenciales.\n2️⃣ Si fue en las últimas 72 horas, existe la **profilaxis post-exposición (PEP)** para VIH.\n3️⃣ Si tienes síntomas (ardor, secreción, llagas), no esperes — consulta pronto.\n4️⃣ Pide orientación sin miedo a ser juzgada/o.",
+    quickReplies: ["Quiero saber más", "¿Cómo me protejo?", "Quiero hacerme una prueba", "Necesito ayuda"],
   },
   {
-    keywords: ["anticonceptivo", "método anticonceptivo", "pastilla anticonceptiva", "condón", "preservativo", "implante", "diu", "inyectable", "planificación familiar"],
-    reply: "Los **métodos anticonceptivos modernos** disponibles para adolescentes en el Perú, según la Norma Técnica del MINSA (NT 032), son:\n\n• **Condón masculino y femenino:** el único que también protege contra ITS. Uso correcto = más del 98% de efectividad.\n• **Pastillas anticonceptivas:** se toman a diario. Muy efectivas si no se olvidan.\n• **Inyectable mensual o trimestral:** conveniente si no quieres recordarlo cada día.\n• **Implante subdérmico:** se coloca en el brazo, dura hasta 3 años y es uno de los más efectivos (>99%).\n• **DIU (dispositivo intrauterino):** intrauterino, dura hasta 10 años, reversible.\n\n**¿Cómo acceder?**\nPuedes pedirlos en cualquier **centro de salud del MINSA** de forma gratuita y confidencial — **sin necesitar autorización de tus padres o de ningún adulto**. Esto está garantizado por ley.\n\n¿Quieres saber más sobre alguno en particular, o sobre la pastilla de emergencia (AOE)?",
+    id: "relaciones_saludables",
+    keywords: ["relacion saludable", "relación saludable", "relacion sana", "relación sana", "pareja sana", "amor sano", "buena relacion", "buena relación", "como debe ser una relacion", "cómo debe ser una relación", "relaciones", "noviazgo", "pareja"],
+    info: "Una **relación saludable** — de pareja, amistad o familia — se construye sobre respeto, confianza y comunicación.\n\nCaracterísticas de una relación sana:\n💜 **Respeto mutuo** — se respetan los límites de cada quien.\n💜 **Confianza** — sin necesidad de espiar ni controlar.\n💜 **Comunicación** — pueden hablar de cualquier cosa sin miedo.\n💜 **Libertad** — cada quien tiene su espacio, amigos y actividades propias.\n💜 **Apoyo** — se celebran los logros del otro.\n💜 **Igualdad** — ninguno manda sobre el otro.",
+    more: "Una relación saludable también incluye:\n\n• **Conflictos resueltos con palabras**, no con gritos ni golpes.\n• **Respeto a las decisiones individuales** — sobre el cuerpo, la carrera, las amistades.\n• **Sin manipulación emocional** — frases como «si me quisieras lo harías» son señales de alerta.\n• **Sin presión para tener sexo** — si hay presión, eso ya no es sano.\n• **Se puede terminar la relación sin miedo** — nadie debería temer irse.",
+    example: "Contraste:\n\n❌ Poco sana: Luis revisa el celular de Ana sin permiso. Dice «si no me muestras, es porque me estás mintiendo».\n\n✅ Sana: Luis dice «siento que algo está pasando, ¿podemos hablar?». Ella explica, él escucha, resuelven juntos.",
+    action: "Si sientes que tu relación actual no se parece a lo que leíste:\n\n• Eso no significa que sea irremediable, pero sí vale la pena hablarlo.\n• Puedes conversar con alguien de confianza — amiga/o, familiar, orientador/a.\n• Si hay presión, control o violencia, eso requiere apoyo especializado.",
+    quickReplies: ["Quiero saber más", "Muéstrame un ejemplo", "¿Cómo sé si mi relación es tóxica?", "Estoy en una situación así"],
   },
   {
-    keywords: ["aoe", "píldora del día siguiente", "pastilla de emergencia", "anticoncepción de emergencia", "emergencia", "píldora"],
-    reply: "La **AOE (Anticoncepción Oral de Emergencia)**, también llamada «pastilla del día siguiente», es un método de emergencia para usar después de una relación sexual sin protección o cuando falló el método que usabas.\n\n**Lo que debes saber:**\n• **No es abortiva.** Funciona retrasando o impidiendo la ovulación. Si ya hubo fertilización, no actúa.\n• Es más efectiva cuanto antes la tomes: dentro de las **primeras 24 horas** tiene >95% de efectividad; hasta 72 horas sigue siendo eficaz.\n• En Perú es **legal** y está disponible en farmacias y en centros de salud MINSA.\n• Tienes derecho a solicitarla **sin receta y sin autorización de un adulto**.\n\n**Importante:** la AOE no protege contra ITS (infecciones de transmisión sexual) ni reemplaza un método anticonceptivo regular. Si la necesitas frecuentemente, puede ser útil hablar con un médico sobre métodos más consistentes.\n\n¿Tienes alguna duda específica sobre cómo funciona o cómo conseguirla?",
+    id: "señales_alerta",
+    keywords: ["señales de alerta", "señales de violencia", "relacion toxica", "relación tóxica", "pareja toxica", "pareja tóxica", "celos", "control", "me controla", "revisa mi celular", "me espia", "me espía", "como se si", "cómo sé si", "señales", "maltrato", "controlling"],
+    info: "Las **señales de alerta** en una relación pueden ser difíciles de reconocer cuando hay sentimientos fuertes. Algunas:\n\n🔴 Revisa tu celular o redes sin permiso.\n🔴 Se enoja mucho cuando hablas con otras personas.\n🔴 Te hace sentir culpable por pasar tiempo con amigos/familia.\n🔴 Te dice cosas hirientes y luego dice «fue una broma».\n🔴 Te presiona para tener relaciones sexuales.\n🔴 Te hace sentir que sin él/ella no eres nada.\n🔴 Amenaza con hacerse daño si lo dejas.",
+    more: "El control y los celos extremos son formas de violencia psicológica aunque no haya golpes — y con el tiempo, pueden escalar.\n\nOtras señales importantes:\n• Te aísla de tus amistades y familia.\n• Critica constantemente tu forma de vestir, hablar o pensar.\n• Las peleas siempre terminan siendo «tu culpa».\n• Te hace sentir estúpida/o, fea/o o inútil.\n\n💜 Que no te golpee no significa que no haya violencia. La violencia psicológica es igual de dañina.",
+    example: "Karla y Miguel llevan 6 meses juntos. Cada vez que Karla sale con sus amigas, Miguel le manda mensajes sin parar. Si no responde de inmediato, le dice «claramente no te importo». Luego se disculpa y dice que es porque la quiere mucho.\n\nEsto se llama **ciclo de violencia**: tensión → explosión → reconciliación → calma. Y tiende a repetirse y escalar.",
+    action: "Si reconoces estas señales:\n\n1️⃣ **Confía en lo que sientes** — si algo te hace sentir mal, algo está mal.\n2️⃣ Habla con alguien de confianza que pueda apoyarte.\n3️⃣ No tienes que tomar decisiones apresuradas, pero sí mereces saber que tienes opciones.\n4️⃣ Puedes llamar a la **Línea 100** solo para conversar — no es solo para emergencias.",
+    riskFollowUp: "¿Estás viviendo alguna de estas situaciones ahora mismo? Cuéntame un poco más — estoy aquí para acompañarte.",
+    helpRoutes: "📞 **Línea 100** — orientación gratuita, 24h, confidencial\n💬 **Chat 100** — si no puedes llamar\n🏛️ **CEM** — atención integral en violencia de género\n🏫 **Orientador/a de tu colegio** — primer apoyo accesible",
+    quickReplies: ["Quiero saber más", "Muéstrame un ejemplo", "Estoy viviendo esto", "¿Qué puedo hacer?"],
   },
   {
-    keywords: ["condón", "preservativo", "cómo usar condón", "cómo se usa el condón"],
-    reply: "El **condón** es el único método que protege al mismo tiempo contra embarazo no planificado **e** infecciones de transmisión sexual (ITS como VIH, sífilis, gonorrea).\n\n**Uso correcto paso a paso:**\n1. Revisa la fecha de vencimiento y que el empaque esté intacto.\n2. Abre el envoltorio con cuidado — nunca con dientes o tijeras.\n3. Colócalo antes de cualquier contacto genital, no solo antes de la penetración.\n4. Deja un espacio en la punta para recoger el semen.\n5. Al terminar, retíralo con cuidado y desecha en la basura (nunca en el inodoro).\n\nUn condón usado correctamente tiene más del **98% de efectividad**. La mayoría de fallos ocurren por uso incorrecto.\n\nPuedes conseguir condones gratuitamente en centros de salud MINSA. ¿Tienes alguna otra duda?",
+    id: "violencia_genero",
+    keywords: ["violencia de genero", "violencia de género", "violencia contra la mujer", "violencia machista", "feminicidio", "machismo", "tipos de violencia", "que es violencia", "qué es violencia"],
+    info: "La **violencia de género** es cualquier acto que cause daño físico, sexual, psicológico o económico basado en el género — afecta principalmente a mujeres y niñas, pero también a hombres y personas no binarias.\n\nTipos de violencia reconocidos por la **Ley N.° 30364**:\n• **Física**: golpes, empujones, jalones.\n• **Psicológica**: insultos, humillaciones, control, manipulación.\n• **Sexual**: cualquier acto sexual sin consentimiento.\n• **Económica**: controlar el dinero, impedir trabajar o estudiar.",
+    more: "La **Ley N.° 30364** en Perú establece que:\n\n• El Estado tiene la obligación de actuar ante la violencia.\n• Se pueden pedir **medidas de protección** sin necesitar abogado.\n• Los CEM brindan atención legal, psicológica y social gratuita.\n• **La violencia en el noviazgo también está protegida** — no solo en el matrimonio.",
+    action: "Si estás en esta situación:\n\n• **Línea 100** — orientación, 24h, gratuita.\n• **CEM más cercano** — atención integral gratuita (legal, psicológica, social).\n• **105 (Policía)** — para emergencias inmediatas.\n• No tienes que demostrar nada para pedir ayuda — con tu testimonio es suficiente para empezar.",
+    helpRoutes: "📞 **Línea 100** — gratuita, 24h\n🏛️ **CEM** — atención gratuita e integral\n👮 **105** — Policía Nacional (emergencia)\n💬 **Chat 100** — si no puedes llamar",
+    quickReplies: ["Quiero saber más", "¿Qué puedo hacer?", "Estoy en esta situación", "Necesito ayuda ahora"],
   },
   {
-    keywords: ["its", "infección de transmisión sexual", "enfermedades de transmisión", "vih", "sida", "sífilis", "gonorrea", "clamidia", "herpes genital"],
-    reply: "Las **ITS (Infecciones de Transmisión Sexual)** son infecciones que se transmiten principalmente por contacto sexual sin protección. Las más comunes en adolescentes son:\n\n• **VIH/SIDA:** no tiene cura, pero con tratamiento antirretroviral una persona puede tener una vida plena y normal.\n• **Sífilis:** tratable con antibióticos si se detecta a tiempo. Puede ser grave si no se trata.\n• **Gonorrea y clamidia:** muy comunes, frecuentemente sin síntomas. Tratables con antibióticos.\n• **Herpes genital:** no tiene cura, pero los brotes se pueden controlar con medicación.\n• **VPH (Virus del Papiloma Humano):** existe vacuna, incluida en el calendario de vacunación escolar en Perú.\n\n**Prevención:** el **condón** usado correctamente desde el inicio del contacto sexual es la protección más efectiva.\n\n**Diagnóstico:** puedes hacerte pruebas en cualquier centro de salud MINSA. Muchas son gratuitas y confidenciales. ¿Hay alguna ITS específica sobre la que quieras saber más?",
+    id: "violencia_fisica",
+    keywords: ["me golpea", "me pega", "me empuja", "me jala", "me patea", "me lastima", "me hiere", "golpes", "moretones", "me lanzo", "me lanzó", "me lanza"],
+    riskKeywords: ["me golpea", "me pega", "me golpeó", "me pegó", "me lastimó", "me hirió"],
+    info: "Lo que describes — ser golpeada/o, empujada/o o lastimada/o — es **violencia física**. No es normal, no lo mereces y no tienes que tolerarlo.\n\nEsto ocurre en parejas, en familias, en amistades. Y puede pasar aunque esa persona diga que te quiere. El amor no hace daño.",
+    riskFollowUp: "¿Estás en un lugar seguro ahora mismo? Cuéntame cómo estás para orientarte mejor.",
+    helpRoutes: "📞 **Línea 100** — orientación y emergencias, gratuita, 24h\n👮 **105** — Policía Nacional (emergencia inmediata)\n🏛️ **CEM** — atención integral gratuita\n🏥 **Hospital o centro de salud** — pueden atenderte y documentar lesiones",
+    quickReplies: ["Estoy en peligro ahora", "Ya estoy a salvo", "Quiero entender qué me pasó", "¿Qué puedo hacer?"],
   },
   {
-    keywords: ["matrimonio infantil", "matrimonio forzado", "unión temprana", "me quieren casar", "me obligan a casarme", "convivencia forzada"],
-    reply: "El **matrimonio y las uniones tempranas** son reconocidos por UNICEF, el MIMP y la Defensoría del Pueblo como una forma de violencia contra niñas y adolescentes, aunque en muchos contextos se presenten como algo «normal» o «tradicional».\n\n**¿Por qué es un problema?**\n• Interrumpe la educación: el 36% de las desvinculaciones escolares en Perú están relacionadas con maternidad o uniones tempranas (UNFPA).\n• Aumenta el riesgo de violencia doméstica dentro de la pareja.\n• Perpetúa ciclos de pobreza — las madres adolescentes ganan un 24% menos a lo largo de su vida.\n• Una decisión tomada bajo presión familiar o económica **no es una decisión libre**.\n\n**En Perú, la ley establece** que ninguna persona menor de 18 años puede contraer matrimonio sin autorización especial, y las uniones de hecho entre adultos y menores pueden constituir delitos.\n\nSi sientes presión para unirte o casarte, puedes contactar a la **DEMUNA** de tu municipio o llamar a la **Línea 100**. ¿Estás tú en esta situación, o es por información general?",
+    id: "violencia_psicologica",
+    keywords: ["me insulta", "me humilla", "me grita", "me menosprecia", "me dice cosas feas", "me hace sentir mal", "me hace sentir menos", "palabras hacen daño", "violencia psicologica", "violencia psicológica", "me manipula", "me amenaza"],
+    info: "Los insultos, las humillaciones, las amenazas y la manipulación son **violencia psicológica** — y son igual de serios que los golpes.\n\nFormas de violencia psicológica:\n• Insultos, burlas o críticas constantes.\n• Amenazas («te voy a hacer daño», «voy a lastimar a alguien que quieres»).\n• Manipulación («te lo mereces», «tú me provocas», «sin mí no eres nada»).\n• Ignorarte o hacer silencio como castigo.\n\nEsto daña la autoestima y puede ser el inicio de otras formas de violencia.",
+    more: "La violencia psicológica es más difícil de identificar porque no deja marcas visibles. Pero sus efectos son reales:\n\n• Baja autoestima y sentido de culpa constante.\n• Dificultad para tomar decisiones sin el agresor.\n• Aislamiento de amigos y familia.\n• Depresión, ansiedad, insomnio.\n\nEs importante nombrarla: si alguien te hace sentir pequeña/o, asustada/o o culpable de forma constante, eso es violencia.",
+    action: "Pasos si estás en esta situación:\n\n• Habla con alguien de confianza — no tienes que cargarlo sola/o.\n• Llama a la **Línea 100** — pueden orientarte aunque no haya golpes.\n• Escribe un registro de lo que ocurre (fecha, qué pasó) — puede servir si decides denunciar.\n• Tu bienestar emocional importa tanto como la seguridad física.",
+    riskFollowUp: "¿Estos insultos o amenazas están escalando? Cuéntame un poco más — hay opciones concretas para ti.",
+    helpRoutes: "📞 **Línea 100** — orientación gratuita, 24h\n🏛️ **CEM** — atención psicológica gratuita\n🏫 **Orientador/a de tu colegio** — primer apoyo accesible",
+    quickReplies: ["Quiero saber más", "Estoy viviendo esto", "¿Qué puedo hacer?", "Necesito ayuda"],
   },
   {
-    keywords: ["mgf", "mutilación genital", "mutilación femenina", "ablación"],
-    reply: "La **Mutilación Genital Femenina (MGF)** es cualquier procedimiento que modifica o extirpa total o parcialmente los genitales externos femeninos sin razón médica. La OMS la clasifica como una grave violación de los derechos humanos y una forma de violencia de género.\n\n**Tipos:**\n• Tipo I: extirpación del clítoris o su capuchón.\n• Tipo II: extirpación del clítoris y los labios menores.\n• Tipo III (infibulación): la más grave — cierre casi total de la vagina.\n• Tipo IV: otros procedimientos dañinos (pinchazos, cortes, cauterización).\n\n**Consecuencias:** dolor crónico, infecciones, complicaciones en el parto, traumas psicológicos, y en casos graves, la muerte.\n\nNo es una práctica extendida en Perú, pero existe en comunidades con tradiciones de ciertos países y es importante conocerla. Si conoces o sospechas un caso, puedes reportarlo a la **Línea 100** o al **CEM**. La respuesta debe ser de protección, nunca de juicio cultural.",
+    id: "violencia_sexual",
+    keywords: ["abuso sexual", "violacion", "violación", "me violaron", "me violo", "me violó", "me tocaron sin permiso", "me tocó sin permiso", "me obligaron", "me obligó", "me forzaron", "me forzó", "tocamiento", "acto sexual sin consentimiento"],
+    riskKeywords: ["me violaron", "me violó", "abuso sexual", "me forzaron", "me forzó", "me obligaron", "me obligó a"],
+    info: "Si alguien te tocó, te forzó o tuvo relaciones contigo sin tu consentimiento, eso es **violencia sexual** — y es un delito en Perú.\n\nNo importa:\n• Si conoces a esa persona o es tu pareja.\n• Cómo ibas vestida/o.\n• Si antes habías tenido relaciones con esa persona.\n• Si no pudiste resistir o gritar.\n\n**No fue tu culpa.** Mereces apoyo y tienes derechos.",
+    riskFollowUp: "¿Ocurrió recientemente? Si fue en las últimas 72 horas, hay atención de emergencia disponible.",
+    helpRoutes: "🏥 **Centro de salud MINSA** — si fue en las últimas 72h, pueden darte el kit de emergencia (profilaxis + AOE) sin necesitar acompañante.\n🏛️ **CEM** — atención legal, psicológica y social gratuita.\n📞 **Línea 100** — orientación confidencial, 24h.\n👮 **105** — para denunciar (no es obligatorio para recibir atención médica).",
+    quickReplies: ["Ocurrió recientemente", "Fue hace tiempo", "Quiero entender qué me pasó", "Necesito ayuda ahora"],
   },
   {
-    keywords: ["denunciar", "denuncia", "cómo denuncio", "quiero denunciar", "reportar", "anónimo", "denuncia anónima"],
-    reply: "Denunciar puede sentirse difícil, pero tienes más opciones de las que quizás crees:\n\n**Opciones de denuncia en Perú:**\n\n1. **Línea 100 (gratuita, 24h):** puedes llamar anónimamente. Te orientarán y, si quieres, derivarán el caso al CEM más cercano.\n2. **Chat 100 (chat100.pe):** denuncia por escrito sin dar tu nombre. Funciona las 24h.\n3. **CEM (Centro Emergencia Mujer):** atención presencial, gratuita. Abren contigo un expediente y te acompañan en todo el proceso.\n4. **Comisaría:** la Policía está obligada legalmente a recibir tu denuncia aunque no tengas «pruebas perfectas».\n5. **Fiscalía:** puedes ir directamente sin pasar por la Policía.\n\n**Si quieres ser anónima/o:** la Línea 100 y el Chat 100 permiten reportes sin revelar tu identidad. Lo que más ayuda en ese caso es describir qué ocurre, en qué zona o distrito, y si hay menores involucrados.\n\n¿Quieres que te explique cómo es el proceso completo, o tienes una situación específica en mente?",
+    id: "violencia_familiar",
+    keywords: ["violencia en casa", "violencia familiar", "mi papa", "mi papá", "mi mamá", "mi mama", "mi padrastro", "mi madrastra", "me pegan en casa", "me insultan en casa", "mis padres se pelean", "violencia domestica", "violencia doméstica"],
+    riskKeywords: ["me pegan en casa", "me insultan en casa", "mi papá me golpea", "mi mamá me golpea", "mi padrastro me"],
+    info: "La violencia en el hogar es cualquier acto que cause daño dentro de la familia — puede ser física, psicológica, económica o sexual. Puede venir de padres, padrastros, hermanos u otros familiares.\n\nQue ocurra en casa no lo hace normal ni aceptable.\n\nLa **Ley N.° 30364** también protege a los adolescentes de la violencia familiar.",
+    more: "Si en tu casa hay violencia:\n\n• Tienes derecho a ser protegida/o.\n• Existen rutas de ayuda que no requieren que un adulto te acompañe.\n• La **DEMUNA** de tu municipio puede intervenir ante la familia directamente.\n• Los CEM también atienden a adolescentes que viven violencia en el hogar.",
+    action: "Opciones si estás viviendo violencia en casa:\n\n1️⃣ **Habla con un/a adulto/a de confianza fuera de casa** — docente, familiar lejano, vecino/a.\n2️⃣ **Llama al 100** — es confidencial, no se enteran en tu casa.\n3️⃣ **Acude a la DEMUNA de tu municipio** — protegen específicamente a niños y adolescentes.\n4️⃣ Si hay peligro inmediato, llama al **105**.",
+    riskFollowUp: "¿El peligro es ahora mismo? ¿Puedes salir a un lugar seguro?",
+    helpRoutes: "📞 **Línea 100** — 24h, gratuita, confidencial\n🏛️ **DEMUNA** — en tu municipio, protege a niños y adolescentes\n🏛️ **CEM** — atención integral\n👮 **105** — emergencia policial",
+    quickReplies: ["Estoy en peligro ahora", "Ya estoy a salvo", "¿Qué puedo hacer?", "Necesito ayuda"],
   },
   {
-    keywords: ["línea 100", "linea 100", "llamo al 100", "cómo funciona la línea 100", "qué pasa si llamo"],
-    reply: "La **Línea 100** es el servicio nacional de orientación frente a violencia familiar y sexual, operado por el MIMP (Ministerio de la Mujer y Poblaciones Vulnerables).\n\n**Características:**\n• **Gratuita:** desde cualquier teléfono fijo o celular, sin costo.\n• **Confidencial:** no queda registro de tu llamada en la factura.\n• **Disponible las 24 horas**, los 7 días de la semana, incluyendo feriados.\n• Atendida por **profesionales en psicología y trabajo social**.\n\n**¿Qué pasa cuando llamas?**\n1. Un/a operador/a responde y te pregunta cómo puede ayudarte.\n2. Puedes contar lo que está pasando a tu ritmo — no tienes que saber todo de antemano.\n3. Si lo necesitas, te derivarán al **CEM más cercano** a tu domicilio.\n4. Si hay peligro inmediato, coordinarán con la Policía.\n\n**No necesitas estar segura/o de nada para llamar.** Puedes llamar con dudas, con miedo, o simplemente para informarte. ¿Te gustaría saber qué decir cuando contestan?",
+    id: "acoso_bullying",
+    keywords: ["acoso", "acoso escolar", "bullying", "me molestan", "se burlan de mi", "se burlan de mí", "me hacen bullying", "me insultan en el colegio", "ciberbullying", "cyberbullying", "acoso cibernetico", "acoso cibernético", "acoso por internet", "me amenazan por whatsapp"],
+    info: "El **acoso o bullying** es cuando alguien te hostiga, insulta, excluye o agrede de forma repetida — puede ocurrir en persona o por internet (ciberbullying).\n\nFormas de acoso:\n• Insultos, burlas o apodos hirientes.\n• Difusión de rumores o fotos sin permiso.\n• Exclusión deliberada del grupo.\n• Amenazas, chantajes o intimidación.\n\nNo es «cosas de chicos» ni algo que debas aguantar sola/o.",
+    more: "El **ciberbullying** es especialmente dañino porque ocurre las 24 horas y puede ser anónimo. Si alguien comparte fotos íntimas tuyas sin permiso, eso es **violencia sexual digital** y es un delito en Perú (Ley N.° 30096).",
+    action: "Si estás viviendo acoso:\n\n1️⃣ Guarda evidencia: capturas, mensajes, fechas.\n2️⃣ Cuéntaselo a un adulto de confianza: familiar, docente, tutor.\n3️⃣ Informa a la dirección del colegio — tienen obligación de actuar.\n4️⃣ Si es ciberbullying grave, puedes reportar a la **Policía Cibernética**.\n5️⃣ Puedes pedir apoyo a la **DEMUNA** si el colegio no actúa.",
+    helpRoutes: "🏫 **Dirección de tu colegio** — primer paso\n🏛️ **DEMUNA** — puede exigir al colegio que actúe\n👮 **Policía Cibernética** — para casos de acoso digital grave\n📞 **Línea 100** — orientación si el acoso incluye violencia",
+    quickReplies: ["Quiero saber más", "Estoy viviendo esto", "¿Qué puedo hacer?", "Necesito ayuda"],
   },
   {
-    keywords: ["cem", "centro emergencia mujer", "qué es el cem", "cómo funciona el cem"],
-    reply: "Los **Centros Emergencia Mujer (CEM)** son servicios del Estado peruano (MIMP) que atienden casos de violencia familiar y sexual. Están en todo el país — incluyendo comisarías, hospitales y municipios — y son completamente gratuitos.\n\n**¿Qué servicios ofrecen?**\n• **Psicológico:** acompañamiento emocional y terapia.\n• **Social:** orientación sobre redes de apoyo y recursos.\n• **Legal:** asesoría jurídica y acompañamiento en denuncias.\n• **Defensa judicial:** representación en procesos legales si lo necesitas.\n\n**¿Qué debo saber antes de ir?**\n• No necesitas cita previa en casos de urgencia.\n• Tienen la obligación de evitar la **revictimización**: no tendrás que repetir tu historia muchas veces.\n• Los menores de edad son atendidos con protocolos especiales de protección.\n• Puedes ir sola/o o acompañada/o.\n\nPuedes encontrar el CEM más cercano llamando a la **Línea 100** o consultando el directorio del MIMP en su web. ¿Tienes alguna duda sobre qué esperar cuando llegas?",
+    id: "limites_autonomia",
+    keywords: ["limites", "límites", "poner limites", "poner límites", "decirle no", "decir no", "no se como decir no", "no sé cómo decir no", "me cuesta decir no", "tengo miedo de decir no", "como me defiendo", "cómo me defiendo", "autonomia", "autonomía", "mis decisiones"],
+    info: "Los **límites personales** son los que defines tú sobre lo que está bien y lo que no contigo — con tu cuerpo, tu tiempo, tus emociones.\n\nTienes derecho a:\n• Decir «no» a cualquier cosa que no quieras hacer.\n• Cambiar de opinión aunque antes hayas dicho que sí.\n• Pedir que paren algo que no te gusta.\n• No dar explicaciones largas para defender tu límite.\n\nPoner límites no es ser egoísta — es respetarte.",
+    more: "Poner límites puede ser difícil cuando tienes miedo a la reacción del otro, sientes que «deberías» hacerlo, o simplemente no sabes exactamente qué sientes — solo que algo no está bien.\n\nAlgunas frases para comenzar:\n• «No me siento cómoda/o con eso»\n• «Necesito que pares»\n• «Prefiero no hacerlo»\n\nNo necesitas justificarte. Si la otra persona no respeta tu «no», esa es una señal de alerta importante.",
+    example: "Marco quiere que Sofía le mande fotos. Ella no quiere, pero tiene miedo de que se enoje.\n\nLo que puede decir: «No quiero hacerlo y no voy a cambiar de opinión. Si te enojas, eso es tu decisión, no mía.»\n\nSi Marco la presiona o amenaza, eso ya es una señal que merece atención.",
+    action: "Si te cuesta poner límites:\n\n• Empieza con situaciones pequeñas — el músculo de decir «no» se ejercita.\n• Identifica qué situaciones te generan malestar y nómbralas (aunque sea solo para ti).\n• Habla con alguien de confianza si sientes presión constante para ceder.\n• Si hay amenazas cuando dices «no», eso requiere apoyo externo.",
+    quickReplies: ["Quiero saber más", "Muéstrame un ejemplo", "Me presionan constantemente", "Necesito ayuda"],
   },
   {
-    keywords: ["demuna", "qué es la demuna", "defensoría municipal", "derechos de niños"],
-    reply: "La **DEMUNA (Defensoría Municipal del Niño, Niña y Adolescente)** es un servicio gratuito de las municipalidades peruanas que protege los derechos de menores de edad.\n\n**¿Qué puede hacer por ti?**\n• Intervenir si un colegio te discrimina por embarazo o te impide asistir.\n• Mediar y orientar en casos de violencia familiar o abandono.\n• Acompañarte en procesos de reconocimiento de paternidad o alimentos.\n• Derivarte al CEM u otras instituciones especializadas.\n• Recibir denuncias de maltrato o abuso contra menores.\n\n**¿Dónde está?**\nEn la municipalidad distrital de tu zona. Puedes ir directamente o llamar para consultar el horario.\n\nA diferencia del CEM, la DEMUNA está específicamente orientada a menores de edad y opera desde el nivel local — lo que la hace más accesible en muchas zonas rurales o periurbanas. ¿Necesitas ayuda para encontrar la DEMUNA más cercana?",
+    id: "derechos",
+    keywords: ["mis derechos", "derechos", "derechos sexuales", "derechos reproductivos", "derechos del adolescente", "derechos de los adolescentes", "derechos legales", "ley", "proteccion legal", "protección legal"],
+    info: "Como adolescente en Perú, tienes derechos reconocidos por ley:\n\n📌 **Salud sexual y reproductiva** — acceder a información y anticonceptivos.\n📌 **Educación** — incluso si estás embarazada (Ley N.° 29600).\n📌 **Integridad** — nadie puede tocarte sin tu consentimiento.\n📌 **Protección** — ante cualquier forma de violencia.\n📌 **Privacidad** — incluyendo tu información de salud.\n📌 **Ser escuchada/o** — en procesos legales o de protección.",
+    more: "Leyes clave que te protegen:\n\n• **Ley N.° 30364** — prevención y sanción de la violencia.\n• **Ley N.° 29600** — prohíbe la expulsión de colegios por embarazo.\n• **Ley N.° 30466** — interés superior del niño y adolescente.\n• **Ley N.° 28983** — igualdad de oportunidades.\n• **Código de los Niños y Adolescentes** — marco legal para menores de 18 años.\n\nSi alguien viola tus derechos — una institución, familiar o autoridad — puedes denunciarlo.",
+    action: "Si crees que se vulneraron tus derechos:\n\n• Acude a la **DEMUNA** de tu municipio (gratuita).\n• La **Defensoría del Pueblo** recibe quejas contra instituciones públicas.\n• El **CEM** te orienta en casos de violencia.\n• No necesitas ir con un adulto para recibir orientación.",
+    quickReplies: ["Quiero saber más", "Alguien violó mis derechos", "¿Dónde puedo denunciar?", "Necesito ayuda"],
   },
   {
-    keywords: ["mi derecho", "tengo derecho", "derechos adolescentes", "derechos sexuales", "derechos reproductivos", "qué derechos tengo"],
-    reply: "Como adolescente en Perú, tienes derechos reconocidos por el Código de los Niños y Adolescentes, la Ley N.° 30364 y normas del MINSA y MINEDU:\n\n**Derechos de salud sexual y reproductiva:**\n• Acceso gratuito a métodos anticonceptivos sin autorización de tus padres.\n• Atención médica confidencial en salud reproductiva.\n• El kit de emergencia tras una agresión sexual — sin barreras ni autorizaciones.\n\n**Derechos frente a la violencia:**\n• A denunciar sin tener «pruebas perfectas».\n• A que la Policía y el Ministerio Público te atiendan obligatoriamente.\n• A no ser revictimizada/o durante los procesos.\n\n**Derechos educativos:**\n• A continuar en el colegio si estás embarazada — ninguna institución puede expulsarte.\n• A recibir educación sexual integral como parte del currículo.\n\n**Derecho a la información:**\n• A recibir información veraz sobre tu salud, cuerpo y derechos — de forma comprensible y sin ser juzgada/o.\n\n¿Quieres que profundice en alguno de estos derechos en particular?",
+    id: "matrimonio_infantil",
+    keywords: ["matrimonio infantil", "matrimonio temprano", "me quieren casar", "me van a casar", "me casaron", "casarme joven", "union temprana", "unión temprana", "convivencia forzada"],
+    riskKeywords: ["me quieren casar", "me van a casar", "me casaron a la fuerza"],
+    info: "En Perú, el **matrimonio antes de los 18 años** está prohibido por ley desde 2018. Ningún juez, notario ni autoridad religiosa puede autorizarlo.\n\nEl matrimonio o convivencia forzada a temprana edad vulnera tu derecho a la educación, la salud y a decidir sobre tu propia vida.",
+    more: "Las consecuencias del matrimonio infantil incluyen:\n• Abandono escolar.\n• Mayor riesgo de violencia doméstica.\n• Embarazos tempranos y complicaciones de salud.\n• Pérdida de autonomía y proyecto de vida.\n\nSi alguien te está presionando a casarte o convivir, puedes pedir ayuda.",
+    action: "Si estás en esta situación o conoces un caso:\n\n• Habla con un/a adulto/a de confianza fuera del entorno familiar inmediato.\n• Acude a la **DEMUNA** de tu municipio.\n• Llama a la **Línea 100**.",
+    riskFollowUp: "¿Estás siendo presionada/o ahora mismo? Cuéntame más — hay formas de protegerte.",
+    helpRoutes: "📞 **Línea 100** — orientación y protección\n🏛️ **DEMUNA** — protección de derechos de adolescentes\n🏛️ **CEM** — si hay violencia asociada\n📋 **MIMP** — reporte de vulneración de derechos",
+    quickReplies: ["Quiero saber más", "Me está pasando a mí", "Conozco un caso", "Necesito ayuda"],
   },
   {
-    keywords: ["colegio embarazo", "me expulsan del colegio", "no me dejan entrar", "escuela embarazada", "estudiar embarazada", "educación embarazo"],
-    reply: "Ningún colegio en el Perú puede **expulsarte, impedirte asistir o discriminarte** por estar embarazada. Esto está protegido por:\n\n• La **Ley N.° 26842** (Ley General de Salud)\n• La **Resolución Ministerial del MINEDU** que garantiza la permanencia escolar de adolescentes embarazadas o madres.\n• La **Convención sobre los Derechos del Niño** (ratificada por Perú).\n\n**¿Qué puedes hacer si te están discriminando?**\n1. Reportarlo a la **DEMUNA** de tu municipio — pueden intervenir directamente ante la institución educativa.\n2. Llamar a la **Línea 100** para orientación.\n3. Presentar una queja ante la **UGEL** (Unidad de Gestión Educativa Local) de tu zona.\n4. La **Defensoría del Pueblo** también recibe este tipo de denuncias.\n\nTu educación es un derecho. La permanencia escolar es fundamental para tu proyecto de vida. ¿Estás pasando por esta situación ahora mismo?",
+    id: "donde_ayuda",
+    keywords: ["donde pedir ayuda", "dónde pedir ayuda", "linea 100", "línea 100", "cem", "demuna", "como pedir ayuda", "cómo pedir ayuda", "donde denunciar", "dónde denunciar", "a quien acudir", "a quién acudir", "rutas de ayuda", "quiero denunciar", "como denuncio"],
+    info: "En Perú hay varias rutas de ayuda gratuitas para adolescentes:\n\n📞 **Línea 100** — violencia familiar y sexual. Gratuita, 24h, confidencial.\n💬 **Chat 100** — si no puedes llamar. En línea.\n🏛️ **CEM (Centro de Emergencia Mujer)** — atención integral: legal, psicológica y social. Gratuita.\n🏛️ **DEMUNA** — en cada municipio, protege a niños y adolescentes.\n👮 **105** — Policía Nacional (emergencias).\n🏥 **Centro de salud MINSA** — salud sexual y reproductiva gratuita.",
+    more: "¿Cómo funciona pedir ayuda?\n\n1️⃣ Llamas, escribes o vas a un servicio.\n2️⃣ Te escuchan sin juzgarte.\n3️⃣ Te explican tus opciones.\n4️⃣ Si quieres, te acompañan — pero no estás obligada/o.\n\n**No necesitas ir con un adulto. No necesitas tener todo claro. Puedes llamar solo para preguntar.**",
+    action: "Si no sabes por dónde empezar:\n\n• **Línea 100** es la opción más accesible — puedes llamar ahora mismo.\n• Si prefieres el chat: busca «Chat 100 MIMP» en internet.\n• Si estás en tu colegio, el orientador/a o psicólogo/a escolar es el primer paso presencial.",
+    quickReplies: ["¿Cómo funciona el CEM?", "Quiero llamar al 100", "Prefiero el chat", "Necesito ayuda ahora"],
   },
   {
-    keywords: ["señales de violencia", "señales de alerta", "cómo sé si hay violencia", "cómo reconocer violencia", "indicadores de violencia"],
-    reply: "Reconocer la violencia puede ser difícil, especialmente cuando viene de alguien cercano o cuando la situación se normalizó con el tiempo. Estas son las principales señales, según el MIMP y el protocolo de actuación de los CEM:\n\n**Señales físicas:**\n• Lesiones que no coinciden con la explicación que se da.\n• Dolor o irritación en zona genital o anal.\n• Infecciones de transmisión sexual.\n• Embarazo temprano no deseado.\n\n**Señales conductuales:**\n• Cambios bruscos de humor o actitud.\n• Aislamiento de amigos y familia.\n• Bajo rendimiento o abandono escolar repentino.\n• Conductas sexualizadas que no corresponden con la edad.\n• Pesadillas frecuentes, dificultad para dormir.\n\n**Señales emocionales:**\n• Depresión o ansiedad persistente.\n• Autolesiones o pensamientos de hacerse daño.\n• Miedo inexplicable a personas o lugares específicos.\n• Muy baja autoestima, sentirse «culpable de todo».\n\nNinguna señal por sí sola confirma una situación de violencia, pero cuando varias aparecen juntas, es importante actuar. ¿Lo preguntas por alguien en particular?",
+    id: "emergencia",
+    keywords: ["estoy en peligro", "peligro inmediato", "me va a hacer daño", "me quiere pegar", "tengo miedo ahora", "me esta amenazando", "me está amenazando", "ayuda ya", "socorro", "emergencia", "me van a hacer daño", "ayudame", "ayúdame"],
+    riskKeywords: ["estoy en peligro", "peligro", "socorro", "ayuda ya", "me va a hacer daño"],
+    info: "Si estás en peligro ahora mismo, lo más importante es tu seguridad.\n\n📞 **Llama al 105** — Policía Nacional del Perú. Gratuita.\n📞 **Llama al 100** — si puedes hablar con discreción.\n\nSi no puedes llamar:\n• Escríbele a alguien de confianza.\n• Ve a un lugar público con personas alrededor.\n• Ve a la comisaría más cercana.",
+    helpRoutes: "👮 **105** — Policía Nacional (emergencia)\n📞 **Línea 100** — orientación y derivación de emergencias\n🏥 **Centro de salud** — si hay lesiones\n🏛️ **CEM** — atención integral después de la emergencia",
+    quickReplies: ["Llamaré al 105 ahora", "No puedo llamar ahora", "Ya estoy a salvo", "Necesito más opciones"],
   },
   {
-    keywords: ["relación tóxica", "relación dañina", "mi pareja me controla", "celos", "me revisa el teléfono", "me controla", "relación abusiva"],
-    reply: "Una relación puede ser dañina aunque no haya golpes. Algunas señales de que una relación de pareja es **tóxica o abusiva**:\n\n• Te revisa el teléfono, tus redes o tus mensajes sin permiso.\n• Decide con quién puedes juntarte o a dónde puedes ir.\n• Te hace sentir culpable cuando no haces lo que quiere.\n• Te insulta o menosprecia, a veces en público o «en broma».\n• Si discuten, sientes que tienes que caminar con cuidado para no molestarlo/a.\n• Te ha amenazado con hacerse daño o con dejarte si no le obedeces.\n• Los celos extremos se presentan como «amor» pero en realidad son control.\n\n**Una relación sana** se basa en respeto mutuo, comunicación, confianza y libertad — no en miedo ni en obediencia.\n\nEl **control y la manipulación** son formas de violencia psicológica reconocidas por la ley. Si te identificas con alguna de estas situaciones, puedes hablar con alguien del **CEM** o llamar a la **Línea 100** para orientación. ¿Quieres contarme algo más sobre tu situación?",
+    id: "mgf",
+    keywords: ["mutilacion genital", "mutilación genital", "mgf", "fgm", "corte femenino", "circuncision femenina", "circuncisión femenina"],
+    info: "La **Mutilación Genital Femenina (MGF)** es la modificación o extirpación de genitales externos femeninos sin razón médica. Es reconocida por la OMS como una forma de violencia que vulnera los derechos humanos.\n\nEn Perú no es una práctica extendida, pero si conoces un caso o estás en riesgo, puedes reportarlo.",
+    action: "Si conoces un caso o estás en riesgo:\n\n• Llama a la **Línea 100**.\n• Acude a la **DEMUNA** de tu municipio.\n• También puedes comunicarte con la **Defensoría del Pueblo**.",
+    helpRoutes: "📞 **Línea 100** — orientación y protección\n🏛️ **DEMUNA** — protección de derechos\n📋 **Defensoría del Pueblo** — reporte de vulneraciones",
+    quickReplies: ["Quiero saber más", "Conozco un caso", "Necesito ayuda"],
   },
   {
-    keywords: ["kit de emergencia", "kit emergencia minsa", "protocol 083", "pastilla después de violación", "qué hacer si me violaron"],
-    reply: "Si fuiste víctima de una agresión sexual **reciente (idealmente antes de 72 horas)**, tienes derecho a recibir el **Kit de Emergencia** en cualquier establecimiento de salud del MINSA.\n\nEste kit, normado por el **Decreto Supremo N.° 083-2003-PCM**, incluye:\n• Antivirales para prevenir el VIH (profilaxis post-exposición).\n• Antibióticos para prevenir ITS (gonorrea, sífilis, clamidia).\n• **Anticoncepción de emergencia (AOE)** para prevenir embarazo no deseado.\n• Vacuna contra hepatitis B (si no la tienes).\n\n**¿Cómo acceder?**\n• Ve a cualquier hospital, centro de salud o clínica MINSA.\n• El personal de salud **no puede negarte** este kit por ningún motivo.\n• **No necesitas hacer una denuncia previa** para recibirlo.\n• Si te lo niegan, puedes reportarlo al **SUSALUD** (0800-10828, gratuito).\n\nAdemás de la atención médica, tienes derecho a acompañamiento psicológico. ¿Estás en un lugar seguro ahora mismo?",
-  },
-  {
-    keywords: ["miedo", "asustada", "asustado", "tengo miedo", "no sé qué hacer", "estoy perdida", "no sé a quién acudir"],
-    reply: "Que tengas miedo tiene sentido. Es una respuesta completamente normal cuando estás en una situación difícil o confusa. No significa que estés exagerando ni que debas resolverlo sola/o.\n\nLo más importante ahora: **no tienes que tener todo claro para pedir ayuda**. Puedes llamar al **100** o escribir al **Chat 100** aunque no sepas exactamente qué está pasando. Ellos están entrenados para escucharte y ayudarte a ordenar las cosas.\n\nAlgunas cosas que a veces ayudan:\n• Habla con alguien de confianza — un adulto, un familiar, una amiga cercana.\n• Escribe lo que sientes, aunque sea en privado — ayuda a ordenar los pensamientos.\n• Recuerda que hay personas cuyo trabajo es exactamente acompañarte en esto.\n\nEstoy aquí si quieres contarme más sobre lo que está pasando. 💜",
-  },
-  {
-    keywords: ["no me creen", "nadie me cree", "me dijeron que estaba mintiendo", "siento que es mi culpa", "me dijeron que es mi culpa"],
-    reply: "Que no te crean o que te hagan sentir culpable es algo que pasa con demasiada frecuencia, y es profundamente injusto. Lo que estás sintiendo es válido.\n\nAlgunas cosas que son importantes que sepas:\n• **No necesitas que todos te crean para buscar ayuda.** Los servicios como la Línea 100 y los CEM están diseñados para escucharte sin cuestionar.\n• La violencia **nunca es culpa de quien la recibe** — sin importar qué ropa llevabas, dónde estabas, o qué pasó antes.\n• Las personas que minimizan o niegan la violencia a veces lo hacen por incomodidad o ignorancia, no porque tengan razón.\n\nEl **CEM** y los operadores de la **Línea 100** tienen protocolos específicos para evitar la revictimización — es decir, están capacitados para no hacerte sentir peor al contar tu historia.\n\n¿Quieres que te oriente sobre cómo acceder a esos servicios?",
-  },
-  {
-    keywords: ["gracias", "thank you", "muchas gracias", "me ayudaste", "me sirvió"],
-    reply: "De nada 💜 Me alegra que esto haya sido útil. Recuerda que esta plataforma, la **Línea 100** y los **CEM** están siempre disponibles si necesitas más orientación o apoyo.\n\nNo estás sola/o — y pedir información o ayuda es un acto de valentía. Si en algún momento necesitas hablar de algo más, aquí estaré.",
+    id: "offtopic",
+    keywords: ["capital de", "presidente de", "cuanto es", "cuánto es", "matematicas", "matemáticas", "tarea", "receta", "pelicula", "película", "musica", "música", "juego", "futbol", "fútbol", "chiste"],
+    info: "Puedo ayudarte principalmente con temas relacionados con **relaciones saludables, derechos, violencia, embarazo, salud sexual y cómo pedir ayuda** en Perú. 💜\n\n¿Hay algo de esos temas sobre lo que quieras conversar?",
+    quickReplies: ["Relaciones y consentimiento", "Embarazo y anticoncepción", "Violencia y señales de alerta", "Mis derechos en Perú"],
   },
 ]
 
-function getAIReply(input: string): string {
-  const lower = input.toLowerCase()
-  // Priority: check longer/more specific keyword phrases first
-  const sorted = [...AI_RESPONSES].sort((a, b) => {
-    const aMax = Math.max(...a.keywords.map((k) => k.length))
-    const bMax = Math.max(...b.keywords.map((k) => k.length))
-    return bMax - aMax
-  })
-  const match = sorted.find((r) => r.keywords.some((k) => lower.includes(k)))
-  if (match) return match.reply
-  // Fallback with a more thoughtful generic response
-  if (lower.includes("?") || lower.length > 30) {
-    return "Entiendo que tienes una pregunta importante. Para darte la mejor orientación, ¿puedes contarme un poco más sobre lo que quieres saber? También puedes:\n\n• Llamar a la **Línea 100** (gratuita, 24h) para hablar con un/a profesional.\n• Escribir al **Chat 100** (chat100.pe) si prefieres no llamar.\n• Explorar las secciones de esta plataforma — hay información detallada sobre violencia, anticoncepción, derechos y más."
-  }
-  return "Cuéntame más sobre lo que quieres saber 💜 Puedo orientarte sobre señales de violencia, métodos anticonceptivos, tus derechos como adolescente, cómo denunciar, o cómo acceder a servicios de ayuda en Perú."
+// ─── Quick reply shortcuts → map to a topic + sub-action ─────────────────────
+const QUICK_REPLY_MAP: Record<string, { topicId: string; sub: "info" | "more" | "example" | "action" | "help" }> = {
+  "Relaciones y consentimiento": { topicId: "relaciones_saludables", sub: "info" },
+  "Embarazo y anticoncepción": { topicId: "embarazo", sub: "info" },
+  "Violencia y señales de alerta": { topicId: "señales_alerta", sub: "info" },
+  "Mis derechos en Perú": { topicId: "derechos", sub: "info" },
+  "Quiero saber más": { topicId: "", sub: "more" },
+  "Muéstrame un ejemplo": { topicId: "", sub: "example" },
+  "¿Qué puedo hacer?": { topicId: "", sub: "action" },
+  "Necesito ayuda": { topicId: "donde_ayuda", sub: "info" },
+  "Necesito ayuda ahora": { topicId: "emergencia", sub: "info" },
+  "Necesito más opciones": { topicId: "donde_ayuda", sub: "info" },
+  "Estoy en peligro ahora": { topicId: "emergencia", sub: "info" },
+  "Ya estoy a salvo": { topicId: "", sub: "action" },
+  "Estoy viviendo esto": { topicId: "", sub: "action" },
+  "Me está pasando a mí": { topicId: "", sub: "action" },
+  "¿Cómo prevenirlo?": { topicId: "anticonceptivos", sub: "info" },
+  "Hablar de relaciones": { topicId: "relaciones_saludables", sub: "info" },
+  "Hablar de anticoncepción": { topicId: "anticonceptivos", sub: "info" },
+  "Mis derechos": { topicId: "derechos", sub: "info" },
+  "¿Cómo sé si mi relación es tóxica?": { topicId: "señales_alerta", sub: "info" },
+  "¿Qué es la pastilla de emergencia?": { topicId: "aoe", sub: "info" },
+  "¿Cómo los consigo?": { topicId: "anticonceptivos", sub: "action" },
+  "¿Cómo accedo a ella?": { topicId: "aoe", sub: "action" },
+  "La relación no fue consentida": { topicId: "violencia_sexual", sub: "info" },
+  "¿Cómo me protejo?": { topicId: "its", sub: "action" },
+  "Quiero hacerme una prueba": { topicId: "its", sub: "action" },
+  "¿Cómo funciona el CEM?": { topicId: "donde_ayuda", sub: "more" },
+  "Quiero llamar al 100": { topicId: "donde_ayuda", sub: "action" },
+  "Prefiero el chat": { topicId: "donde_ayuda", sub: "action" },
+  "Llamaré al 105 ahora": { topicId: "emergencia", sub: "help" },
+  "No puedo llamar ahora": { topicId: "emergencia", sub: "help" },
+  "¿Dónde puedo denunciar?": { topicId: "donde_ayuda", sub: "info" },
+  "Alguien violó mis derechos": { topicId: "derechos", sub: "action" },
+  "Conozco un caso": { topicId: "", sub: "action" },
+  "Ocurrió recientemente": { topicId: "violencia_sexual", sub: "help" },
+  "Fue hace tiempo": { topicId: "violencia_sexual", sub: "action" },
+  "Quiero entender qué me pasó": { topicId: "violencia_sexual", sub: "action" },
+  "Mi consentimiento no fue respetado": { topicId: "consentimiento", sub: "action" },
+  "Quiero entender qué pasó": { topicId: "", sub: "more" },
+  "Me presionan constantemente": { topicId: "limites_autonomia", sub: "action" },
 }
 
+// ─── RISK detection — triggers stage 2 ───────────────────────────────────────
+const RISK_PHRASES = [
+  "me golpea", "me pega", "me lastima", "me hiere", "me amenaza",
+  "me insulta todos los dias", "me insulta todos los días",
+  "me obliga", "me forzó", "me forzo", "me violaron", "me violo", "me violó",
+  "me tocaron sin permiso", "me tocó sin permiso", "abuso sexual",
+  "estoy en peligro", "peligro ahora", "tengo miedo ahora",
+  "me quiere pegar", "me va a hacer daño", "me están amenazando",
+  "me esta amenazando", "me están amenazando",
+  "estoy embarazada", "quedé embarazada", "sali embarazada",
+  "me pegan en casa", "mi papa me golpea", "mi papá me golpea",
+  "me quieren casar", "me van a casar",
+  "socorro", "ayuda ya", "ayudame ahora",
+]
+
+function detectRisk(text: string): boolean {
+  const n = norm(text)
+  return RISK_PHRASES.some((p) => n.includes(norm(p)))
+}
+
+// ─── Keyword scoring ──────────────────────────────────────────────────────────
+function scoreKeywords(nText: string, keywords: string[]): number {
+  let score = 0
+  for (const kw of keywords) {
+    const nkw = norm(kw)
+    if (nText.includes(nkw)) score += nkw.length * 2
+  }
+  return score
+}
+
+function findBestTopic(text: string): AyniTopic | null {
+  const n = norm(text)
+  let bestScore = 0
+  let bestTopic: AyniTopic | null = null
+  for (const topic of AYNI_TOPICS) {
+    const score = scoreKeywords(n, topic.keywords)
+    if (score > bestScore) { bestScore = score; bestTopic = topic }
+  }
+  return bestScore > 0 ? bestTopic : null
+}
+
+// ─── Reference word detection ─────────────────────────────────────────────────
+const REF_WORDS = ["eso", "esto", "eso significa", "entonces", "y eso", "esta mal", "está mal", "que hago", "qué hago", "como puedo", "cómo puedo", "y si", "por que", "por qué", "puedo hacer", "y ahora", "eso quiere decir", "significa que", "quiere decir", "y entonces", "entonces que", "entonces qué"]
+
+function isReferenceMsg(text: string): boolean {
+  const n = norm(text)
+  return text.trim().split(/\s+/).length <= 8 && REF_WORDS.some((w) => n.includes(norm(w)))
+}
+
+// ─── Build response text from topic + sub ────────────────────────────────────
+function buildResponse(topic: AyniTopic, sub: "info" | "more" | "example" | "action" | "help"): { text: string; quickReplies: string[] } {
+  if (sub === "more" && topic.more) return { text: topic.more, quickReplies: ["Muéstrame un ejemplo", "¿Qué puedo hacer?", "Necesito ayuda"] }
+  if (sub === "example" && topic.example) return { text: topic.example, quickReplies: ["Quiero saber más", "¿Qué puedo hacer?", "Necesito ayuda"] }
+  if (sub === "action" && topic.action) return { text: topic.action, quickReplies: topic.helpRoutes ? ["Ver rutas de ayuda en Perú", "Quiero saber más"] : ["Quiero saber más", "Necesito ayuda"] }
+  if (sub === "help" && topic.helpRoutes) return { text: topic.helpRoutes, quickReplies: ["¿Cómo funciona el CEM?", "Quiero saber más", "Quiero llamar al 100"] }
+  return { text: topic.info, quickReplies: topic.quickReplies }
+}
+
+// ─── Main conversation engine ─────────────────────────────────────────────────
+interface AyniState {
+  currentTopicId: string | null
+  stage: "info" | "risk" | "support"
+}
+
+function getAyniReply(
+  input: string,
+  state: AyniState
+): { text: string; quickReplies: string[]; nextState: AyniState } {
+
+  const n = norm(input)
+  const isRisk = detectRisk(input)
+
+  // ── Quick reply button pressed ──
+  const qr = QUICK_REPLY_MAP[input.trim()]
+  if (qr) {
+    const topicId = qr.topicId || state.currentTopicId || ""
+    const topic = AYNI_TOPICS.find((t) => t.id === topicId)
+    if (topic) {
+      const { text, quickReplies } = buildResponse(topic, qr.sub)
+      return { text, quickReplies, nextState: { currentTopicId: topic.id, stage: isRisk ? "risk" : state.stage } }
+    }
+  }
+
+  // ── Special: "Ya estoy a salvo" ──
+  if (n.includes("ya estoy a salvo") || n.includes("estoy a salvo")) {
+    return {
+      text: "Me alegra que estés en un lugar seguro. 💜\n\nCuando estés lista/o, hay servicios que pueden ayudarte con lo que viviste — sin prisa y sin presión. ¿Quieres que te cuente sobre las opciones que existen en Perú?",
+      quickReplies: ["Sí, cuéntame sobre las opciones", "¿Qué es el CEM?", "Quiero hablar de otra cosa"],
+      nextState: { ...state, stage: "support" },
+    }
+  }
+
+  // ── Risk situation detected ──
+  if (isRisk) {
+    const topic = findBestTopic(input) || AYNI_TOPICS.find((t) => t.id === "donde_ayuda")!
+    const followUp = AYNI_TOPICS.find((t) => t.id === topic.id)?.riskFollowUp || "¿Estás en un lugar seguro ahora mismo?"
+
+    // Show risk acknowledgment + follow-up question
+    return {
+      text: `Lo que describes es importante y quiero que sepas que **no estás sola/o**. 💜\n\n${topic.info}\n\n---\n${followUp}`,
+      quickReplies: topic.quickReplies,
+      nextState: { currentTopicId: topic.id, stage: "risk" },
+    }
+  }
+
+  // ── Reference message — continue current topic ──
+  if (isReferenceMsg(input) && state.currentTopicId) {
+    const topic = AYNI_TOPICS.find((t) => t.id === state.currentTopicId)
+    if (topic?.more) {
+      return {
+        text: topic.more,
+        quickReplies: ["Muéstrame un ejemplo", "¿Qué puedo hacer?", "Necesito ayuda"],
+        nextState: state,
+      }
+    }
+  }
+
+  // ── "Ver rutas de ayuda" ──
+  if (n.includes("rutas de ayuda") || n.includes("ver rutas")) {
+    const topic = state.currentTopicId ? AYNI_TOPICS.find((t) => t.id === state.currentTopicId) : null
+    const routes = topic?.helpRoutes || AYNI_TOPICS.find((t) => t.id === "donde_ayuda")!.info
+    return {
+      text: routes,
+      quickReplies: ["¿Cómo funciona el CEM?", "Quiero llamar al 100", "Necesito más orientación"],
+      nextState: { ...state, stage: "support" },
+    }
+  }
+
+  // ── Normal keyword matching ──
+  const topic = findBestTopic(input)
+  if (topic) {
+    return {
+      text: topic.info,
+      quickReplies: topic.quickReplies,
+      nextState: { currentTopicId: topic.id, stage: "info" },
+    }
+  }
+
+  // ── Short/ambiguous input ──
+  if (input.trim().split(/\s+/).length <= 3) {
+    return {
+      text: "Cuéntame un poco más — ¿sobre qué tema quieres conversar? Aquí puedes escribir con confianza. 💜",
+      quickReplies: ["Relaciones y consentimiento", "Embarazo y anticoncepción", "Violencia y señales de alerta", "Mis derechos en Perú"],
+      nextState: state,
+    }
+  }
+
+  // ── Dynamic fallback ──
+  const snippet = input.trim().split(/\s+/).slice(0, 5).join(" ")
+  return {
+    text: `Entiendo que quieres hablar sobre algo relacionado con «${snippet}…». Puedo orientarte en relaciones, violencia, anticoncepción, embarazo, derechos y cómo pedir ayuda en Perú. Cuéntame un poco más o elige un tema. 💜`,
+    quickReplies: ["Relaciones y consentimiento", "Violencia y señales de alerta", "Mis derechos en Perú", "Necesito ayuda"],
+    nextState: state,
+  }
+}
+
+// ─── Chat Component ───────────────────────────────────────────────────────────
 function AICompanionChat() {
-  const [messages, setMessages] = useState<{ from: "user" | "ai"; text: string }[]>([
-    { from: "ai", text: "Hola 💜 Soy tu acompañante virtual. Puedo orientarte sobre señales de violencia, tus derechos, cómo pedir ayuda o qué métodos anticonceptivos existen. ¿En qué puedo ayudarte hoy?" },
+  type ChatMsg = { from: "user" | "ai"; text: string; quickReplies?: string[] }
+
+  const WELCOME = "¡Hola! 💜 Soy **Acompáñame AYNI**, tu orientadora de *Más Allá del Tabú*.\n\nPuedes preguntarme sobre relaciones, consentimiento, embarazo, anticoncepción, tus derechos o violencia — con información real pensada para adolescentes en Perú. Aquí no hay preguntas tontas y todo es confidencial.\n\n¿Sobre qué quieres conversar?"
+  const WELCOME_QR = ["Relaciones y consentimiento", "Embarazo y anticoncepción", "Violencia y señales de alerta", "Mis derechos en Perú"]
+
+  const [messages, setMessages] = useState<ChatMsg[]>([
+    { from: "ai", text: WELCOME, quickReplies: WELCOME_QR },
   ])
   const [input, setInput] = useState("")
   const [open, setOpen] = useState(false)
+  const [typing, setTyping] = useState(false)
+  const [ayniState, setAyniState] = useState<AyniState>({ currentTopicId: null, stage: "info" })
   const bottomRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (open) bottomRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages, open])
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages, typing])
 
-  const send = () => {
-    const trimmed = input.trim()
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 100)
+  }, [open])
+
+  const processMessage = (text: string) => {
+    const trimmed = text.trim()
     if (!trimmed) return
-    const userMsg = { from: "user" as const, text: trimmed }
-    const aiText = getAIReply(trimmed)
-    setMessages((prev) => [...prev, userMsg, { from: "ai", text: aiText }])
+
+    // Remove quick replies from all previous messages
+    setMessages((prev) => [
+      ...prev.map((m) => ({ ...m, quickReplies: undefined })),
+      { from: "user", text: trimmed },
+    ])
     setInput("")
+    setTyping(true)
+
+    const delay = 700 + Math.min(trimmed.length * 10, 800)
+    setTimeout(() => {
+      try {
+        const { text: reply, quickReplies, nextState } = getAyniReply(trimmed, ayniState)
+        setTyping(false)
+        setMessages((prev) => [...prev, { from: "ai", text: reply, quickReplies }])
+        setAyniState(nextState)
+      } catch {
+        setTyping(false)
+        setMessages((prev) => [...prev, { from: "ai", text: "Lo siento, tuve un problema al procesar tu mensaje. 💜 Intenta nuevamente." }])
+      }
+    }, delay)
   }
+
+  const renderText = (text: string) =>
+    text
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.*?)\*/g, "<em>$1</em>")
+      .replace(/---/g, "<hr style='border-color:#E0D9F5;margin:8px 0'>")
 
   return (
     <div className="fixed bottom-24 right-6 z-[9990]" style={{ maxWidth: 340 }}>
       {open && (
         <div
           className="mb-3 rounded-3xl overflow-hidden shadow-2xl flex flex-col"
-          style={{
-            background: "#FAFBFF",
-            border: "1.5px solid #EDE8F7",
-            width: 320,
-            maxHeight: 440,
-          }}
+          style={{ background: "#FAFBFF", border: "1.5px solid #EDE8F7", width: 330, maxHeight: 520 }}
         >
           {/* Header */}
-          <div className="px-5 py-4 flex items-center gap-3" style={{ background: "linear-gradient(135deg, #8B31D4, #E91E8C)" }}>
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-base" style={{ background: "rgba(255,255,255,0.2)" }}>
-              💜
+          <div className="px-5 py-4 flex items-center gap-3 shrink-0" style={{ background: "linear-gradient(135deg, #8B31D4, #E91E8C)" }}>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-base shrink-0" style={{ background: "rgba(255,255,255,0.2)" }}>💜</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-white" style={{ fontFamily: "'Outfit', sans-serif" }}>Acompáñame AYNI</p>
+              <p className="text-xs" style={{ color: "rgba(255,255,255,0.75)", fontFamily: "'Outfit', sans-serif" }}>Orientación educativa · no reemplaza emergencias</p>
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-bold text-white" style={{ fontFamily: "'Outfit', sans-serif" }}>Acompañante AYNI</p>
-              <p className="text-xs" style={{ color: "rgba(255,255,255,0.75)", fontFamily: "'Outfit', sans-serif" }}>Orientación educativa · no reemplaza servicios de emergencia</p>
-            </div>
-            <button onClick={() => setOpen(false)} className="text-white/70 hover:text-white text-lg leading-none">✕</button>
+            <button onClick={() => setOpen(false)} className="text-white/70 hover:text-white text-lg leading-none shrink-0" aria-label="Cerrar chat">✕</button>
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3" style={{ minHeight: 200, maxHeight: 260 }}>
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3" style={{ minHeight: 240, maxHeight: 340 }}>
             {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.from === "user" ? "justify-end" : "justify-start"}`}>
+              <div key={i} className={`flex flex-col ${m.from === "user" ? "items-end" : "items-start"}`}>
                 <div
-                  className="max-w-[90%] px-3 py-2 rounded-2xl text-xs leading-relaxed"
+                  className="max-w-[92%] px-3 py-2 rounded-2xl text-xs leading-relaxed"
                   style={{
                     background: m.from === "user" ? "#8B31D4" : "#F0EDE8",
                     color: m.from === "user" ? "white" : "#1C1C1E",
@@ -1923,33 +2253,62 @@ function AICompanionChat() {
                     borderTopLeftRadius: m.from === "ai" ? 4 : undefined,
                     whiteSpace: "pre-wrap",
                   }}
-                  dangerouslySetInnerHTML={{ __html: m.text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") }}
+                  dangerouslySetInnerHTML={{ __html: renderText(m.text) }}
                 />
+                {/* Quick reply buttons */}
+                {m.from === "ai" && m.quickReplies && m.quickReplies.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2 max-w-[92%]">
+                    {m.quickReplies.map((qr) => (
+                      <button
+                        key={qr}
+                        onClick={() => processMessage(qr)}
+                        disabled={typing}
+                        className="text-xs px-2 py-1 rounded-full border transition-all hover:opacity-80 disabled:opacity-40"
+                        style={{
+                          fontFamily: "'Outfit', sans-serif",
+                          borderColor: "#8B31D4",
+                          color: "#8B31D4",
+                          background: "rgba(139,49,212,0.06)",
+                          fontSize: "10px",
+                          lineHeight: "1.2",
+                        }}
+                      >
+                        {qr}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
+            {typing && (
+              <div className="flex justify-start">
+                <div className="px-3 py-2 rounded-2xl text-xs" style={{ background: "#F0EDE8", color: "#8C8C8E", fontFamily: "'Outfit', sans-serif", borderTopLeftRadius: 4 }}>
+                  Acompáñame AYNI está escribiendo…
+                </div>
+              </div>
+            )}
             <div ref={bottomRef} />
           </div>
 
           {/* Input */}
-          <div className="px-4 pb-4 pt-2 flex gap-2 border-t" style={{ borderColor: "#EDE8F7" }}>
+          <div className="px-4 pb-4 pt-2 flex gap-2 border-t shrink-0" style={{ borderColor: "#EDE8F7" }}>
             <input
+              ref={inputRef}
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && send()}
+              onKeyDown={(e) => { if (e.key === "Enter" && !typing) processMessage(input) }}
               placeholder="Escribe tu pregunta..."
+              disabled={typing}
               className="flex-1 px-3 py-2 rounded-xl text-xs outline-none border"
-              style={{
-                background: "#F5F2FF",
-                borderColor: "#E0D9F5",
-                color: "#1C1C1E",
-                fontFamily: "'Outfit', sans-serif",
-              }}
+              style={{ background: "#F5F2FF", borderColor: "#E0D9F5", color: "#1C1C1E", fontFamily: "'Outfit', sans-serif" }}
             />
             <button
-              onClick={send}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-white transition-all hover:opacity-90 shrink-0"
+              onClick={() => processMessage(input)}
+              disabled={typing || !input.trim()}
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-white transition-all hover:opacity-90 shrink-0 disabled:opacity-40"
               style={{ background: "#8B31D4" }}
+              aria-label="Enviar mensaje"
             >
               →
             </button>
@@ -1957,24 +2316,22 @@ function AICompanionChat() {
         </div>
       )}
 
-      {/* Toggle button */}
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="ml-auto flex items-center gap-2 px-4 py-3 rounded-full shadow-xl text-white font-semibold text-sm transition-all hover:scale-105 active:scale-95"
-        style={{
-          background: "linear-gradient(135deg, #8B31D4, #E91E8C)",
-          fontFamily: "'Outfit', sans-serif",
-          boxShadow: "0 4px 20px rgba(139,49,212,0.45)",
-          display: "flex",
-        }}
-        title="Acompañante AYNI — orientación educativa"
-      >
-        <span style={{ fontSize: 16 }}>💜</span>
-        {open ? "Cerrar" : "Orientación AYNI"}
-      </button>
+      {/* Toggle button — hidden when chat is open */}
+      {!open && (
+        <button
+          onClick={() => setOpen(true)}
+          className="ml-auto flex items-center gap-2 px-4 py-3 rounded-full shadow-xl text-white font-semibold text-sm transition-all hover:scale-105 active:scale-95"
+          style={{ background: "linear-gradient(135deg, #8B31D4, #E91E8C)", fontFamily: "'Outfit', sans-serif", boxShadow: "0 4px 20px rgba(139,49,212,0.45)", display: "flex" }}
+          title="Acompáñame AYNI — orientación educativa"
+        >
+          <span style={{ fontSize: 16 }}>💜</span>
+          Orientación AYNI
+        </button>
+      )}
     </div>
   )
 }
+
 
 const CAROUSEL_SLIDES = [
   { src: carousel1, alt: "Bienvenido/as a Más Allá del Tabú — slide 1" },
@@ -1999,6 +2356,7 @@ function ComicSection() {
   const total = CAROUSEL_SLIDES.length
   const [comicIdx, setComicIdx] = useState(0)
   const [comicVisible, setComicVisible] = useState(true)
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
 
   const goTo = (next: number, dir: "left" | "right") => {
     if (isAnimating) return
@@ -2025,6 +2383,7 @@ function ComicSection() {
   }
 
   return (
+    <>
     <section id="experiencias" className="py-24 px-6" style={{ background: "#FAFBFF" }}>
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
@@ -2087,7 +2446,12 @@ function ComicSection() {
               </h3>
             </div>
             <div className="px-4 pb-4">
-              <img src={comicHorizontal} alt="Historieta AYNI — SIENTO, PERO... no es el momento" className="w-full rounded-2xl shadow-lg" />
+              <button onClick={() => setLightboxSrc(comicHorizontal)} className="w-full block relative group cursor-zoom-in">
+                <img src={comicHorizontal} alt="Historieta AYNI — SIENTO, PERO... no es el momento" className="w-full rounded-2xl shadow-lg" />
+                <div className="absolute inset-0 flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="px-4 py-2 rounded-full text-xs font-semibold text-white" style={{ background: "rgba(0,0,0,0.6)", fontFamily: "'Outfit', sans-serif" }}>🔍 Click para ampliar</span>
+                </div>
+              </button>
             </div>
           </div>
 
@@ -2097,8 +2461,11 @@ function ComicSection() {
               const tagColors = ["#A8C923", "#29BFFF", "#F5821F"]
               return (
                 <div key={i} className="flex flex-col gap-2">
-                  <div className="rounded-2xl overflow-hidden border shadow-sm hover:shadow-md transition-shadow" style={{ borderColor: "#EDE8F7" }}>
+                  <div className="rounded-2xl overflow-hidden border shadow-sm hover:shadow-md transition-shadow relative group cursor-zoom-in" style={{ borderColor: "#EDE8F7" }} onClick={() => setLightboxSrc(c.src)}>
                     <img src={c.src} alt={c.title} className="w-full object-cover" style={{ aspectRatio: "4/3", objectPosition: "top" }} />
+                    <div className="absolute inset-0 flex items-end justify-center pb-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="px-3 py-1.5 rounded-full text-xs font-semibold text-white" style={{ background: "rgba(0,0,0,0.6)", fontFamily: "'Outfit', sans-serif" }}>🔍 Click para ampliar</span>
+                    </div>
                   </div>
                   <span className="text-xs font-bold px-3 py-1 rounded-full self-start" style={{ background: `${tagColors[i]}18`, color: tagColors[i], fontFamily: "'Outfit', sans-serif" }}>{c.tag}</span>
                   <h3 className="text-sm font-bold leading-snug" style={{ fontFamily: "'Fraunces', serif", color: "#1C1C1E" }}>{c.title}</h3>
@@ -2135,6 +2502,38 @@ function ComicSection() {
         </div>
       </div>
     </section>
+
+    {lightboxSrc && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{ background: "rgba(8,2,18,0.96)" }}
+        onClick={() => setLightboxSrc(null)}
+      >
+        <div className="relative flex flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
+          <img
+            src={lightboxSrc}
+            alt="Historieta ampliada"
+            className="rounded-2xl shadow-2xl"
+            style={{
+              maxHeight: "90vh",
+              maxWidth: "95vw",
+              width: "auto",
+              height: "auto",
+              display: "block",
+              imageRendering: "auto",
+            }}
+          />
+          <button
+            onClick={() => setLightboxSrc(null)}
+            className="px-6 py-2 rounded-full text-sm font-semibold text-white border border-white/30 hover:bg-white/10 transition-all"
+            style={{ fontFamily: "'Outfit', sans-serif" }}
+          >
+            ✕ Cerrar
+          </button>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
 
@@ -2552,7 +2951,7 @@ function RiskCalculatorSection() {
                     Llamar Línea 100
                   </a>
                   <a
-                    href="https://www.mimp.gob.pe/chat100/"
+                    href="https://share.google/xf4bdT2KlOEipplkv"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-6 py-3 rounded-full font-bold text-sm text-white transition-all hover:opacity-90"
@@ -2625,7 +3024,7 @@ function MapSection() {
 
           {/* Chat 100 CTA */}
           <a
-            href="https://www.mimp.gob.pe/chat100/"
+            href="https://share.google/xf4bdT2KlOEipplkv"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-3 rounded-2xl px-6 py-4 border transition-all hover:shadow-md shrink-0 group"
@@ -2704,7 +3103,7 @@ function MapSection() {
           {[
             { label: "CEM Lima", q: "Centro+Emergencia+Mujer+Lima" },
             { label: "Línea 100", q: "", href: "tel:100" },
-            { label: "Chat 100 MIMP", q: "", href: "https://www.mimp.gob.pe/chat100/" },
+            { label: "Chat 100 MIMP", q: "", href: "https://share.google/xf4bdT2KlOEipplkv" },
             { label: "DEMUNA cercana", q: "DEMUNA+cerca+de+mi" },
           ].map((item, i) => (
             item.href ? (
@@ -2800,7 +3199,7 @@ function ResourcesSection() {
                 Llamar Línea 100
               </a>
               <a
-                href="https://www.mimp.gob.pe/chat100/"
+                href="https://share.google/xf4bdT2KlOEipplkv"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-8 py-4 rounded-full font-bold text-lg text-white transition-all hover:scale-105 shrink-0"
@@ -2827,7 +3226,7 @@ const RECO_CATEGORIES = [
         name: "Conexión — UNFPA Perú",
         desc: "Embarazo adolescente, salud sexual y reproductiva y violencia de género en el contexto peruano, con especialistas y datos nacionales.",
         url: "https://peru.unfpa.org/es/podcast-conexion",
-        urlYT: "https://www.youtube.com/@unfpala",
+        urlYT: "https://youtube.com/@unfpaperuoffice",
         tag: "Podcast · UNFPA",
       },
       {
@@ -2849,7 +3248,7 @@ const RECO_CATEGORIES = [
         desc: "Contenido médico y científico sobre gestación temprana, salud sexual y reproductiva y salud pública en el Perú.",
         url: "https://www.youtube.com/@CayetanoTVoficial",
         urlYT: "https://www.youtube.com/@CayetanoTVoficial",
-        tag: "Podcast · Salud",
+        tag: "YouTube · Salud",
       },
     ],
   },
@@ -3013,8 +3412,8 @@ function RecomendacionesSection() {
                 {item.desc}
               </p>
               <div className="flex gap-2 flex-wrap mt-1">
-                <a href={item.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all hover:opacity-80" style={{ background: cat.color, color: "white", fontFamily: "'Outfit', sans-serif", textDecoration: "none" }}>
-                  🌐 Sitio web ↗
+                <a href={item.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all hover:opacity-80" style={{ background: ("urlYT" in item && (item as {urlYT:string}).urlYT === item.url) ? "#FF0000" : cat.color, color: "white", fontFamily: "'Outfit', sans-serif", textDecoration: "none" }}>
+                  {("urlYT" in item && (item as {urlYT:string}).urlYT === item.url) ? "▶ YouTube ↗" : "🌐 Sitio web ↗"}
                 </a>
                 {"urlYT" in item && item.urlYT !== item.url && (
                   <a href={(item as { urlYT: string }).urlYT} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all hover:opacity-80" style={{ background: "#FF0000", color: "white", fontFamily: "'Outfit', sans-serif", textDecoration: "none" }}>
@@ -3047,7 +3446,7 @@ function Footer() {
         </div>
         <div className="flex flex-col items-end gap-3">
           <a
-            href="https://www.instagram.com"
+            href="https://www.instagram.com/masalladeltabu.pe?igsi=MWY3czR5bHRpZzZpNw=="
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Instagram de Más Allá del Tabú"
